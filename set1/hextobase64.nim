@@ -2,7 +2,7 @@ import strutils
 import base64
 
 # XXX: No error handling
-proc hexToBase64(s: string): string =
+proc hexToBase64*(s: string): string =
     let bs = parseHexStr(s)
     let encoded = encode(bs)
     return encoded
