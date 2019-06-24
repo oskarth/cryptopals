@@ -2,7 +2,8 @@ import strutils
 import fixedxor
 
 const input = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
-const common_chars_set = {' ', 'e', 't', 'a', 'o', 'i'}
+#const common_chars_set = {' ', 'e', 't', 'a', 'o', 'i'}
+const common_chars_set = {'e', 't', 'a', 'o', 'i', 'n', ' ', 's', 'h', 'r', 'd', 'l', 'u'}
 
 type
   CipherResult* = object
@@ -28,12 +29,13 @@ proc score(input: string): int =
 
 proc findbest*(input: string): CipherResult =
     var best = CipherResult(text: "", score: 0, character: '0')
-    for i in countup(0, 127):
+    for i in countup(0, 255): # 127
         let text = xorcipher(input, i)
         let text_score = score(text)
         if text_score > best.score:
             best.text = text
             best.score = text_score
+            best.character = char(i)
     return best
 
 #echo findbest(input)

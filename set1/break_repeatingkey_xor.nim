@@ -2,6 +2,8 @@ import strutils
 import tables
 import fixedxor
 import base64
+import singlebytexorcipher
+import repeatingkey_xor
 
 const ex1 = "this is a test"
 const ex2 = "wokka wokka!!!"
@@ -27,14 +29,17 @@ proc distance(a: string, b:string): int =
 
 assert(distance("this is a test", "wokka wokka!!!") == 37)
 
+
 # Let's open file and turn diff
 
 var encrypted_hex = ""
 var f = open("6.txt")
 for line in f.lines:
     #echo toHex(decode(line))
-    encrypted_hex = decode(line)
+    encrypted_hex = encrypted_hex & decode(line)
 f.close()
+
+echo toHex(encrypted_hex)
 
 
 # # XXX: Only doing keysize up to 20, since we assume we are repeating at least once
@@ -42,6 +47,8 @@ f.close()
 #     let dist = distance(encrypted_hex[0..keysize-1], encrypted_hex[keysize..keysize+keysize-1])
 #     let normalized = dist / keysize
 #     echo "keysize=", keysize, ": ", normalized
+
+# XXX: Scratch that, keysize 5
 
 # This points to
 # keysize=11: 2.636363636363636
@@ -70,15 +77,32 @@ proc guess_keysize(text: string): int =
 #echo guess_keysize(encrypted_hex)
 
 # Assuming keysize=11
+let assumed_keysize = 5
 var blocks: seq[string]
-for i in countup(0,10):
+for i in countup(0,assumed_keysize-1):
     var bl = ""
     var index = i
-    while index <= len(encrypted_hex)-1:
-        bl = bl & encrypted_hex[index]
-        index += 10
+    while index <= len(encrypted_hex)-2:
+        bl = bl & encrypted_hex[index..index+1]
+        index += assumed_keysize-1
 
     blocks.add(bl)
 
+#var best = CipherResult(text: "", score: 0, character: '0')
+#echo findbest(toHex(blocks[0]))
+    
+var key = ""
 for b in blocks:
-    echo toHex(b)
+    var best = CipherResult(text: "", score: 0, character: '0')
+    var res = findbest(toHex(b))
+    echo res
+    key.add(res.character)
+
+echo key
+
+#echo best
+
+#echo toHex(repeated_xorcipher(input, key))
+# echo "..."
+# echo toHex(encrypted_hex)
+# echo repeated_xorcipher(encrypted_hex, key)

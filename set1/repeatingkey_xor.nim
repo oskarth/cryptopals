@@ -10,6 +10,6 @@ proc repeated_xorcipher*(bs1: string, key: string): string =
         repeated_character.add(char(key[i %% 3]))
     fixedxor(bs1, repeated_character)
 
-echo toHex(repeated_xorcipher(input, key))
+#echo toHex(repeated_xorcipher(input, key))
 
 # Extension: read from file as argument / standard input
