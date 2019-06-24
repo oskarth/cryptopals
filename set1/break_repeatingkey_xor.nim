@@ -15,19 +15,15 @@ const hex_lookup =
      'C': "1100", 'D': "1101", 'E': "1110", 'F': "1111"}.toTable
 
 # Compute Hamming distance, number of differing bits
-# XXX: This should really use fixedxor
 proc distance(a: string, b:string): int =
-    let ha = toHex(a)
-    let hb = toHex(b)
-    assert len(ha) == len(hb)
+    assert len(a) == len(b)
+    let res = toHex(fixedxor(a, b))
     var dist = 0
-    for i in countup(0, len(ha)-1):
-        # XXX: Naive
-        var anibble = hex_lookup[ha[i]]
-        var bnibble = hex_lookup[hb[i]]
-        for i in countup(0, 3):
-            if anibble[i] != bnibble[i]:
-                dist+=1
+    for i in countup(0,len(res)-1):
+        # XXX: Has to be a better way to do this
+        for b in hex_lookup[res[i]]:
+            if b == '1':
+                dist += 1
     return dist
 
 assert(distance("this is a test", "wokka wokka!!!") == 37)
