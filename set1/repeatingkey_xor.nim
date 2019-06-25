@@ -8,7 +8,6 @@ const key = "ICE"
 proc repeated_xorcipher*(bs1: string, key: string): string =
     var repeated_character: string
     for i in countup(0, len(bs1)-1):
-        #.........................................
         repeated_character.add(char(key[i %% len(key)]))
     fixedxor(bs1, repeated_character)
 

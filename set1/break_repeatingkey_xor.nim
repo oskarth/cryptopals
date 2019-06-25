@@ -1,4 +1,3 @@
-import algorithm
 import strutils
 import tables
 import bitops
@@ -10,43 +9,13 @@ import repeatingkey_xor
 const ex1 = "this is a test"
 const ex2 = "wokka wokka!!!"
 
-# XXX: Probably more elegant ways...
-const hex_lookup =
-    {'0': "0000", '1': "0001", '2': "0010", '3': "0011",
-     '4': "0100", '5': "0101", '6': "0110", '7': "0111",
-     '8': "1000", '9': "1001", 'A': "1010", 'B': "1011",
-     'C': "1100", 'D': "1101", 'E': "1110", 'F': "1111"}.toTable
-
-# Compute Hamming distance, number of differing bits
-proc distance(a: string, b:string): int =
+proc distance(a: string, b: string): int =
     assert len(a) == len(b)
-    let res = toHex(fixedxor(a, b))
+    let diff = fixedxor(a,b)
     var dist = 0
-    #echo "****HEX res ", res
-    for i in countup(0,len(res)-1):
-        # XXX: Has to be a better way to do this
-        # echo "res i ", res[i], " lookup ", hex_lookup[res[i]]
-        # echo "dist start ", dist
-        for b in hex_lookup[res[i]]:
-            # echo "b ", b
-            if b == '1':
-                dist += 1
-        # echo "dist mid ", dist
+    for i in countup(0, len(diff)-1):
+        dist += countSetBits(ord(diff[i]))
     return dist
-
-proc distance2(a: string, b: string): int =
-    assert len(a) == len(b)
-    let xored = fixedxor(a,b)
-    #echo "xored ", xored
-    var dist = 0
-    for i in countup(0, len(xored)-1):
-        dist += countSetBits(ord(xored[i]))
-        # if a[i] != b[i]:
-        #     dist += 1
-    return dist
-
-# 37 too
-echo "***dist2 ", distance2("this is a test", "wokka wokka!!!")
 
 assert(distance("this is a test", "wokka wokka!!!") == 37)
 
@@ -61,32 +30,37 @@ proc split_blocks(ciphertext: string, keysize: int): seq[string] =
         offset += keysize
     return keysized_blocks
 
-# XXX: Maybe something is wrong with this one?
-# TODO: Consider doing this for much longer, i.e. distance for each block diff
-# I.e. keysize = 5 then take diff each block, etc, normalized
-# HEREATM
+# NOTE: this checks distances pairwise, this works well for real ciphertext
+# However, finding keysize for simpler text may fail, probably due to lack of data.
 proc guess_keysize(ciphertext: string): int =
     var bestguess_dist = 999.9
     var bestguess = 0
-    #var scoresTable = initOrderedTable[float, int]()
+    var scoresTable = initOrderedTable[float, int]()
+
     for keysize in countup(2, 40):
         let s = keysize
-        let blocks = split_blocks(ciphertext, keysize) # => seq[string]
-        # XXX: Hacky
-        var total = 0
-        var distance_sum = 0
+        let blocks = split_blocks(ciphertext, keysize)
+        var sum = 0
         var i = 0
         while i <= len(blocks)-2:
-            total = total + 1
-            distance_sum += distance2(blocks[i], blocks[i+1])
-            i = i+1
-        let average = distance_sum / total
+            sum += distance(blocks[i], blocks[i+1])
+            i += 1
+        let average = sum / i
         let normalized = average / float(keysize)
-        #echo "keysize=", keysize, " ", normalized # ", normalized
+        #echo "keysize=", keysize, " ", normalized
+        scoresTable[normalized] = keysize
         if normalized < bestguess_dist:
             bestguess_dist = normalized
             bestguess = keysize
-    echo bestguess
+
+    scoresTable.sort(cmp)
+    var count = 0
+    for k,v in scoresTable.pairs():
+        if v > 0:
+            if count < 5:
+                echo "keysize ", v, ": ", k
+            count += 1
+    echo "best guess ", bestguess
     return bestguess
 
 proc transpose_blocks(keysized_blocks: seq[string], keysize: int): seq[string] =
@@ -101,10 +75,7 @@ proc transpose_blocks(keysized_blocks: seq[string], keysize: int): seq[string] =
 proc findkey(single_key_blocks: seq[string]): string =
     var key = ""
     for b in single_key_blocks:
-        # This gives correct result for each key and block:
-        #         let text = xorcipher(input, i)
         var res = findbest(b)
-        #var res = findbest(toHex(b))
         key.add(res.character)
     return key
 
@@ -116,8 +87,8 @@ proc split_and_transpose_blocks(ciphertext: string, keysize: int): seq[string] =
 proc breakcipher_with_keysize(ciphertext: string, keysize: int): string =
     let single_key_blocks = split_and_transpose_blocks(ciphertext, keysize)
     let key = findkey(single_key_blocks)
-    echo "****** Key is: ", key
-    echo "**** Plaintext is: \n", repeated_xorcipher(ciphertext, key)
+    # echo "****** Key is: ", key
+    # echo "**** Plaintext is: \n", repeated_xorcipher(ciphertext, key)
     return key
     
 proc breakcipher(ciphertext: string): string =
@@ -137,18 +108,15 @@ let unknown_ciphertext = decode(file)
 # If we know the keysize is 3, we can break the known ciphertext
 #assert(breakcipher_with_keysize(known_ciphertext, 3) == "ICE")
 
-# Can't guess it correctly yet though
+# Can't guess it correctly without knowing keysize, at least with current function
 #assert(breakcipher(known_ciphertext) == "ICE")
 
+# Bruteforce
 # for i in countup(4, 40):
 #     echo "keysize= ", i, " ", breakcipher_with_keysize(unknown_ciphertext, i)
 
-#echo breakcipher(known_ciphertext)
-echo breakcipher(unknown_ciphertext)
 #echo breakcipher_with_keysize(unknown_ciphertext, 29)
 
-#echo repeated_xorcipher(known_ciphertext, "ICE")
-#echo repeated_xorcipher(unknown_ciphertext, "Terminator X: Bring the noise")
-
-# echo distance("this is a test", "wokka wokka!!!")
-
+# Works
+#let key = breakcipher(unknown_ciphertext)
+#echo repeated_xorcipher(unknown_ciphertext, key)
