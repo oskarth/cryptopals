@@ -31,10 +31,17 @@ assert(distance("this is a test", "wokka wokka!!!") == 37)
 
 var entirefile = readFile("6.txt")
 
-# Encrypted with repeating-key crypto
+# Encrypted bytestring with repeating-key crypto, aka ciphertext
 let encrypted_bs = decode(entirefile)
 
+echo "len encrypted bs ", len(encrypted_bs), " len hex ", len(toHex(encrypted_bs))
+
+# Each thing here is a byte, hex version is twice as long and each hex is half a byte.
 for keysize in countup(2, 40):
+    # let a = encrypted_bs[0..keysize-1]
+    # let b = encrypted_bs[keysize..keysize+keysize-1]
+    # echo "*** keysize len ab ", keysize, " ", len(a), " ", len(b)
+    # echo "*** index ", 0, "-", keysize-1, " and ", keysize, "-", keysize+keysize-1
     let dist = distance(encrypted_bs[0..keysize-1], encrypted_bs[keysize..keysize+keysize-1])
     let normalized = dist / keysize
     #echo "keysize=", keysize, ": ", normalized
@@ -61,24 +68,36 @@ proc guess_keysize(text: string): int =
 echo "Guessing keysize is: ", guess_keysize(encrypted_bs)
 
 let assumed_keysize = 5
+
+# Here atm, check logic
 var blocks: seq[string]
 for i in countup(0,assumed_keysize-1):
-    var bl = ""
+    var bl: string # = "" # XXX weird
     var index = i
+    # echo "i ", i
     while index <= len(encrypted_bs)-2:
-        bl = bl & encrypted_bs[index..index+1]
+        # if i == 0:
+        #     echo "for block 0 index: ", index
+        # XXX Weird
+        #echo "what's here? ", type encrypted_bs[index..index+1], " ", encrypted_bs[index..index+1]
+        bl.add(encrypted_bs[index..index+1])
+        #bl = bl & encrypted_bs[index..index+1]
         index += assumed_keysize-1
 
     blocks.add(bl)
 
+echo "block0 ", toHex(blocks[0])
+
+# Now use singlexor
+
 #var best = CipherResult(text: "", score: 0, character: '0')
 #echo findbest(toHex(blocks[0]))
-    
+
 var key = ""
 for b in blocks:
-    var best = CipherResult(text: "", score: 0, character: '0')
+#    var best = CipherResult(text: "", score: 0, character: '0')
     var res = findbest(toHex(b))
-    #echo res
+    echo res
     key.add(res.character)
 
 #echo key
