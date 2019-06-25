@@ -29,43 +29,27 @@ proc distance(a: string, b:string): int =
 
 assert(distance("this is a test", "wokka wokka!!!") == 37)
 
+var entirefile = readFile("6.txt")
 
-# Let's open file and turn diff
+# Encrypted with repeating-key crypto
+let encrypted_bs = decode(entirefile)
 
-var encrypted_hex = ""
-var f = open("6.txt")
-for line in f.lines:
-    #echo toHex(decode(line))
-    encrypted_hex = encrypted_hex & decode(line)
-f.close()
+for keysize in countup(2, 40):
+    let dist = distance(encrypted_bs[0..keysize-1], encrypted_bs[keysize..keysize+keysize-1])
+    let normalized = dist / keysize
+    #echo "keysize=", keysize, ": ", normalized
 
-echo toHex(encrypted_hex)
-
-
-# # XXX: Only doing keysize up to 20, since we assume we are repeating at least once
-# for keysize in countup(2, 20):
-#     let dist = distance(encrypted_hex[0..keysize-1], encrypted_hex[keysize..keysize+keysize-1])
-#     let normalized = dist / keysize
-#     echo "keysize=", keysize, ": ", normalized
-
-# XXX: Scratch that, keysize 5
-
-# This points to
-# keysize=11: 2.636363636363636
-# But keysize=12: 2.833333333333333
-# Also a candidate, try with 4 blocks?
-# keysize=18: 2.944444444444445
-# Let's assume keysize=11 for now
+# If we read file correctly (?) now keysize looks much better, keysize=5: 1.2.
+# Next one is keysize=3: 2.0
 
 # I'm not sure I follow edit distance relevance here though, bits differ less between blocks
 # because there's some common information in them? something like this
 
-# XXX: Only doing keysize up to 20, since we assume we are repeating at least once
 proc guess_keysize(text: string): int =
     var bestguess_dist = 999.9
     var bestguess = 0
 
-    for keysize in countup(2, 20):
+    for keysize in countup(2, 40):
         let dist = distance(text[0..keysize-1], text[keysize..keysize+keysize-1])
         let normalized = dist / keysize
         if normalized < bestguess_dist:
@@ -74,16 +58,15 @@ proc guess_keysize(text: string): int =
 
     return bestguess
 
-#echo guess_keysize(encrypted_hex)
+echo "Guessing keysize is: ", guess_keysize(encrypted_bs)
 
-# Assuming keysize=11
 let assumed_keysize = 5
 var blocks: seq[string]
 for i in countup(0,assumed_keysize-1):
     var bl = ""
     var index = i
-    while index <= len(encrypted_hex)-2:
-        bl = bl & encrypted_hex[index..index+1]
+    while index <= len(encrypted_bs)-2:
+        bl = bl & encrypted_bs[index..index+1]
         index += assumed_keysize-1
 
     blocks.add(bl)
@@ -95,10 +78,10 @@ var key = ""
 for b in blocks:
     var best = CipherResult(text: "", score: 0, character: '0')
     var res = findbest(toHex(b))
-    echo res
+    #echo res
     key.add(res.character)
 
-echo key
+#echo key
 
 #echo best
 
