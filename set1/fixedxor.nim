@@ -5,6 +5,7 @@ proc fixedxor*(bs1: string, bs2: string): string =
     assert(len(bs1) == len(bs2), "Not equal length")
     var res: string
 
+    # XXX: Is this accurate?
     for i in countup(0, len(bs1)-1):
         res.add(char((ord(bs1[i]) xor ord(bs2[i]))))
 

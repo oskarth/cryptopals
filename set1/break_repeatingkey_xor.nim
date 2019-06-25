@@ -1,5 +1,7 @@
+import algorithm
 import strutils
 import tables
+import bitops
 import fixedxor
 import base64
 import singlebytexorcipher
@@ -20,29 +22,33 @@ proc distance(a: string, b:string): int =
     assert len(a) == len(b)
     let res = toHex(fixedxor(a, b))
     var dist = 0
+    #echo "****HEX res ", res
     for i in countup(0,len(res)-1):
         # XXX: Has to be a better way to do this
+        # echo "res i ", res[i], " lookup ", hex_lookup[res[i]]
+        # echo "dist start ", dist
         for b in hex_lookup[res[i]]:
+            # echo "b ", b
             if b == '1':
                 dist += 1
+        # echo "dist mid ", dist
     return dist
 
+proc distance2(a: string, b: string): int =
+    assert len(a) == len(b)
+    let xored = fixedxor(a,b)
+    #echo "xored ", xored
+    var dist = 0
+    for i in countup(0, len(xored)-1):
+        dist += countSetBits(ord(xored[i]))
+        # if a[i] != b[i]:
+        #     dist += 1
+    return dist
+
+# 37 too
+echo "***dist2 ", distance2("this is a test", "wokka wokka!!!")
+
 assert(distance("this is a test", "wokka wokka!!!") == 37)
-
-# XXX: Maybe something is wrong with this one?
-proc guess_keysize(ciphertext: string): int =
-    var bestguess_dist = 999.9
-    var bestguess = 0
-
-    # XXX: Should be upto 40, just temp for ICE key test
-    for keysize in countup(2, 40):
-        let dist = distance(ciphertext[0..keysize-1], ciphertext[keysize..keysize+keysize-1])
-        let normalized = dist / keysize
-        #echo "keysize=", keysize, ": ", normalized
-        if normalized < bestguess_dist:
-            bestguess_dist = normalized
-            bestguess = keysize
-    return bestguess
 
 proc split_blocks(ciphertext: string, keysize: int): seq[string] =
     var keysized_blocks: seq[string]
@@ -54,6 +60,34 @@ proc split_blocks(ciphertext: string, keysize: int): seq[string] =
         keysized_blocks.add(bl)
         offset += keysize
     return keysized_blocks
+
+# XXX: Maybe something is wrong with this one?
+# TODO: Consider doing this for much longer, i.e. distance for each block diff
+# I.e. keysize = 5 then take diff each block, etc, normalized
+# HEREATM
+proc guess_keysize(ciphertext: string): int =
+    var bestguess_dist = 999.9
+    var bestguess = 0
+    #var scoresTable = initOrderedTable[float, int]()
+    for keysize in countup(2, 40):
+        let s = keysize
+        let blocks = split_blocks(ciphertext, keysize) # => seq[string]
+        # XXX: Hacky
+        var total = 0
+        var distance_sum = 0
+        var i = 0
+        while i <= len(blocks)-2:
+            total = total + 1
+            distance_sum += distance2(blocks[i], blocks[i+1])
+            i = i+1
+        let average = distance_sum / total
+        let normalized = average / float(keysize)
+        #echo "keysize=", keysize, " ", normalized # ", normalized
+        if normalized < bestguess_dist:
+            bestguess_dist = normalized
+            bestguess = keysize
+    echo bestguess
+    return bestguess
 
 proc transpose_blocks(keysized_blocks: seq[string], keysize: int): seq[string] =
     var transposed_blocks: seq[string]
@@ -109,7 +143,12 @@ let unknown_ciphertext = decode(file)
 # for i in countup(4, 40):
 #     echo "keysize= ", i, " ", breakcipher_with_keysize(unknown_ciphertext, i)
 
-echo breakcipher_with_keysize(unknown_ciphertext, 29)
+#echo breakcipher(known_ciphertext)
+echo breakcipher(unknown_ciphertext)
+#echo breakcipher_with_keysize(unknown_ciphertext, 29)
 
 #echo repeated_xorcipher(known_ciphertext, "ICE")
-echo repeated_xorcipher(unknown_ciphertext, "Terminator X: Bring the noise")
+#echo repeated_xorcipher(unknown_ciphertext, "Terminator X: Bring the noise")
+
+# echo distance("this is a test", "wokka wokka!!!")
+
