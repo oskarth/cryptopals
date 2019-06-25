@@ -32,6 +32,11 @@ proc findbest*(input: string): CipherResult =
     for i in countup(0, 255): # 127
         let text = xorcipher(input, i)
         let text_score = score(text)
+        # if score(text) > 5:
+        #     echo "ord, char, score ", i, ": ", char(i), " ", text_score
+        #     # XXX: Even this is wrong! #Doing this wrong
+        #     if char(i) == 'I':
+        #         echo "'I' special case ", text
         if text_score > best.score:
             best.text = text
             best.score = text_score
