@@ -35,7 +35,7 @@ proc guess_keysize(ciphertext: string): int =
     var bestguess = 0
 
     # XXX: Should be upto 40, just temp for ICE key test
-    for keysize in countup(2, 30):
+    for keysize in countup(2, 40):
         let dist = distance(ciphertext[0..keysize-1], ciphertext[keysize..keysize+keysize-1])
         let normalized = dist / keysize
         #echo "keysize=", keysize, ": ", normalized
@@ -67,7 +67,10 @@ proc transpose_blocks(keysized_blocks: seq[string], keysize: int): seq[string] =
 proc findkey(single_key_blocks: seq[string]): string =
     var key = ""
     for b in single_key_blocks:
-        var res = findbest(toHex(b))
+        # This gives correct result for each key and block:
+        #         let text = xorcipher(input, i)
+        var res = findbest(b)
+        #var res = findbest(toHex(b))
         key.add(res.character)
     return key
 
@@ -76,12 +79,11 @@ proc split_and_transpose_blocks(ciphertext: string, keysize: int): seq[string] =
     let transposed = transpose_blocks(split, keysize)
     return transposed
 
-
 proc breakcipher_with_keysize(ciphertext: string, keysize: int): string =
     let single_key_blocks = split_and_transpose_blocks(ciphertext, keysize)
     let key = findkey(single_key_blocks)
-#    echo "****** Key is: ", key
- #   echo "**** Plaintext is: \n", repeated_xorcipher(ciphertext, key)
+    echo "****** Key is: ", key
+    echo "**** Plaintext is: \n", repeated_xorcipher(ciphertext, key)
     return key
     
 proc breakcipher(ciphertext: string): string =
@@ -107,11 +109,7 @@ let unknown_ciphertext = decode(file)
 # for i in countup(4, 40):
 #     echo "keysize= ", i, " ", breakcipher_with_keysize(unknown_ciphertext, i)
 
-let str =  breakcipher_with_keysize(unknown_ciphertext, 29)
+echo breakcipher_with_keysize(unknown_ciphertext, 29)
 
-echo "key ", str
-
-## XXX: Also you should be able to guess the keysize
-## XXX: This kind of has to be the key, but why is the unknown ciphertext so weird?
-echo repeated_xorcipher(unknown_ciphertext, "Terminator X: Bring the noise")
 #echo repeated_xorcipher(known_ciphertext, "ICE")
+echo repeated_xorcipher(unknown_ciphertext, "Terminator X: Bring the noise")

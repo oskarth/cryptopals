@@ -11,14 +11,13 @@ type
     score*: int
     character*: char
 
-proc xorcipher*(input: string, iord: int): string =
-    let bs1 = parseHexStr(input)
+proc xorcipher*(bs: string, iord: int): string =
     let character = char(iord)
     var repeated_character: string
-    for i in countup(0, len(bs1)-1):
+    for i in countup(0, len(bs)-1):
         repeated_character.add(character)
 
-    fixedxor(bs1, repeated_character)
+    fixedxor(bs, repeated_character)
 
 proc score(input: string): int =
     var score = 0
@@ -27,20 +26,13 @@ proc score(input: string): int =
             score += 1
     return score
 
-proc findbest*(input: string): CipherResult =
+proc findbest*(bs: string): CipherResult =
     var best = CipherResult(text: "", score: 0, character: '0')
-    for i in countup(0, 255): # 127
-        let text = xorcipher(input, i)
+    for i in countup(0, 255):
+        let text = xorcipher(bs, i)
         let text_score = score(text)
-        # if score(text) > 5:
-        #     echo "ord, char, score ", i, ": ", char(i), " ", text_score
-        #     # XXX: Even this is wrong! #Doing this wrong
-        #     if char(i) == 'I':
-        #         echo "'I' special case ", text
         if text_score > best.score:
             best.text = text
             best.score = text_score
             best.character = char(i)
     return best
-
-#echo findbest(input)
